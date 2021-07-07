@@ -1,0 +1,78 @@
+Run.sh
+#!/bin/bash
+
+echo "please enter full path to project folder" 
+read project_directory
+
+source $project_directory/manifest.txt
+
+
+# Move raw .czi in given project directory into subdirectory
+mkdir -p $project_directory/raw
+mv $project_directory/*.czi $project_directory/raw/
+
+# Make output directoryfor channel-split image stacks
+mkdir -p $project_directory/$ch1
+mkdir -p $project_directory/$ch2
+mkdir -p $project_directory/$ch3
+mkdir -p $project_directory/drg
+
+# Split image stacks (.czi) in project directoryby channel
+if [$nchan = 4]
+then 
+	mkdir -p $project_directory/$ch4
+	for filename in $project_directory/raw/*; do
+    		python /home/drhunt/Desktop/clEsp_pipeline/channelize$nchan.py $filename $ch1 $ch2 $ch3 $ch4;
+	done
+
+else
+	for filename in $project_directory/raw/*; do
+    		python /home/drhunt/Desktop/clEsp_pipeline/channelize$nchan.py $filename $ch1 $ch2 $ch3;
+	done
+fi
+
+
+#downsample drg from macrophage image
+python /path/to/pipeline/doubledsdrg.py $project_directory
+
+
+# Make output directoryfor UNet output
+mkdir -p $project_directory/mac_out
+mkdir -p $project_directory/bv_out
+mkdir -p $project_directory/drg_out
+mkdir -p $project_directory/fiber_out
+
+# Classify macrophage image stack
+
+cd /home/drhunt/Desktop/pipeline/models
+yapic predict $macmod "$project_directory/mac/*.tif" $project_directory/mac_out/
+rm $project_directory/mac_out/*class_2*
+
+echo "Running Mac Models"
+
+# Classify blood vessel image stack
+yapic predict $bvmod "$project_directory/bv/*.tif" $project_directory/bv_out/
+rm $project_directory/bv_out/*class_2*
+
+echo "Running BV Models"
+
+#Classify Acta2 image stack
+if -d["$project_direcotry/bv"]
+then
+	yapic predict $bvmod "$project_directory/acta2/*.tif" $project_directory/acta2_out/
+	rm $project_directory/acta2_out/*class_2*
+fi
+
+
+echo "Running DRG Models"
+# Classify drg image stack
+yapic predict $drgmod "$project_directory/drg/*.tif" $project_directory/drg_out
+rm $project_directory/drg_out/*class_2*
+
+
+for f in $project_directory/drg_out/*_class_3.tif; do cp -- "$f" "${f%drg_class_3.tif}_fiberout.tif"
+done
+for f in $project_directory/drg_out/*_class_1.tif; do cp -- "$f" "${f%drg_class_3.tif}_drgout.tif"
+done
+
+mv $project_directory/drg_out/*_fiber.tif $project_directory/fiber_out/
