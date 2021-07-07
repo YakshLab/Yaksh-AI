@@ -1,0 +1,9 @@
+manifest.txt
+nchan='4'
+ch1='fluor'
+ch2='NeuN'
+ch3='Iba1'
+ch4='CD31' 
+macmod='mac2k2.h5'
+bvmod='cxcl1.h5'
+drgmod='drgfib5.h5'
