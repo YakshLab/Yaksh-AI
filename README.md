@@ -1,7 +1,6 @@
 Yaksh-AI
 ==============================
-
-worry about later
+Under Construction check back soon for full workflow and sample dataset
 
 Project Organization
 ------------
